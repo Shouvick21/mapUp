@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,8 @@ import com.shouvick.mapup.service.LocationTracingService
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
+    val fineLocationPermission = remember { Manifest.permission.ACCESS_FINE_LOCATION }
+    val postNotification = remember { Manifest.permission.POST_NOTIFICATIONS }
     val activity = context as Activity
     val startService: () -> Unit = remember {
         {
@@ -36,9 +39,14 @@ fun MainScreen() {
     }
 
     val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-
-            if (!isGranted) {
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { isGranted ->
+            val fineLocationRuntimeAccepted = isGranted[fineLocationPermission] ?: false
+            val notificationRuntimeAccepted = isGranted[postNotification] ?: false
+            Log.d(
+                "tag",
+                "permission fineLocationRuntimeAccepted -> $fineLocationRuntimeAccepted. notificationRuntimeAccepted ->$notificationRuntimeAccepted "
+            )
+            if (!fineLocationRuntimeAccepted || !notificationRuntimeAccepted) {
                 val shouldShowRational =
                     activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
                 if (!shouldShowRational) {
@@ -58,7 +66,14 @@ fun MainScreen() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Button(
-            onClick = { permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
+            onClick = {
+                permissionLauncher.launch(
+                    arrayOf(
+                        fineLocationPermission,
+                        postNotification
+                    )
+                )
+            }
         ) {
             Text("Start Getting Coordinates")
         }

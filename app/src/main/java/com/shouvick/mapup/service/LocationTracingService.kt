@@ -42,11 +42,9 @@ class LocationTracingService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Location_Coordinates_channel",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_LOW
             )
             notificationManger.createNotificationChannel(channel)
-
-
         }
     }
 
@@ -54,7 +52,8 @@ class LocationTracingService : Service() {
         val intent = Intent(this, LocationTracingService::class.java).apply {
             action = STOP_ACTION
         }
-        val pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_IMMUTABLE or
+            PendingIntent.FLAG_UPDATE_CURRENT)
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_background)
             .setContentTitle("Fetching Location")
