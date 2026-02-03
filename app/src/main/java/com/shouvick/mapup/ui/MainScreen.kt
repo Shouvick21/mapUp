@@ -3,12 +3,16 @@ package com.shouvick.mapup.ui
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,24 +23,64 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.google.android.gms.common.api.ResolvableApiException
+import com.shouvick.mapup.LocationManager
 import com.shouvick.mapup.service.LocationTracingService
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
+    val locationManager = remember { LocationManager(context) }
     val fineLocationPermission = remember { Manifest.permission.ACCESS_FINE_LOCATION }
     val postNotification = remember { Manifest.permission.POST_NOTIFICATIONS }
     val activity = context as Activity
     val startService: () -> Unit = remember {
         {
             val intent = Intent(context, LocationTracingService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            context.startForegroundService(intent)
         }
     }
+
+    val gpsSettingLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult(),
+        onResult = { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                // User clicked "OK" in the dialog. Start the service now!
+                startService()
+            } else {
+                // User clicked "No". Show a toast or error.
+                Toast.makeText(context, "GPS is required!", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
+
+    val checkHighAccurecy = remember {
+        {
+            locationManager.checkLocationSettings(
+                onSuccess = {
+                    startService()
+                },
+                onFailure = { exception ->
+
+                    if (exception is ResolvableApiException) {
+                        try {
+                            val intentSenderRequest = IntentSenderRequest
+                                .Builder(exception.resolution)
+                                .build()
+
+                            gpsSettingLauncher.launch(intentSenderRequest)
+
+                        } catch (e: Exception) {
+
+                        }
+                    }
+                }
+            )
+
+        }
+    }
+
 
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { isGranted ->
@@ -57,7 +101,7 @@ fun MainScreen() {
                     context.startActivity(intent)
                 }
             } else {
-                startService()
+                checkHighAccurecy()
             }
         }
     Column(
