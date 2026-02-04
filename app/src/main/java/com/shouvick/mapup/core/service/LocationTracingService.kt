@@ -1,10 +1,9 @@
-package com.shouvick.mapup.service
+package com.shouvick.mapup.core.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -14,6 +13,9 @@ import androidx.core.app.NotificationCompat
 import com.shouvick.mapup.Location
 import com.shouvick.mapup.LocationManager
 import com.shouvick.mapup.R
+import com.shouvick.mapup.feature.location.data.AppDatabase
+import com.shouvick.mapup.feature.location.data.LocationPoint
+import com.shouvick.mapup.feature.location.data.TrackingSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,6 +30,10 @@ class LocationTracingService : Service() {
     private lateinit var locationManager: LocationManager
     private var trackingJob : Job? = null
 
+
+    private lateinit var database: AppDatabase
+    private var currentSessionId: Long = -1L
+
     companion object {
         const val CHANNEL_ID = "Location_Coordinates_channel"
         const val STOP_ACTION = "stop_Location_Service"
@@ -38,15 +44,23 @@ class LocationTracingService : Service() {
         super.onCreate()
         initialNotificationChannel()
         locationManager = LocationManager(this)
+
+        database = AppDatabase.getDatabase(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
         if (intent?.action == STOP_ACTION) {
+            stopTrackingSession()
             stopSelf()
             return START_NOT_STICKY
         }
+
+        if (currentSessionId == -1L) {
+            createNewSession()
+        }
+
         triggerNotification()
         startTracking()
 
@@ -54,7 +68,7 @@ class LocationTracingService : Service() {
     }
 
     private fun startTracking() {
-        // Launch a coroutine to collect the flow
+
         trackingJob?.cancel()
         trackingJob = serviceScope.launch {
             locationManager.getLocationFlow()
@@ -62,17 +76,49 @@ class LocationTracingService : Service() {
                     Log.e("LocationService", "Error fetching location", e)
                 }
                 .collect { location ->
-                    // THIS CODE RUNS CONTINUOUSLY FOR EVERY NEW COORDINATE
+                    if (currentSessionId != -1L) {
+                        val point = LocationPoint(
+                            sessionOwnerId = currentSessionId,
+                            latitude = location.lat.toDouble(),
+                            longitude = location.long.toDouble(),
+                            accuracy = 0f
+                        )
+                        database.trackingDao().insertLocation(point)
+                        Log.d("LocationService", "Saved point to Session $currentSessionId")
+                    }
+
                     Log.d("LocationService", "New Location: ${location.lat}, ${location.long}")
                     updateNotification(location = location)
-                    // TODO: Send this 'location' to your Server or Database
                 }
+        }
+    }
+
+    private fun createNewSession() {
+        serviceScope.launch {
+
+            val newSession = TrackingSession(startTime = System.currentTimeMillis())
+            currentSessionId = database.trackingDao().insertSession(newSession)
+            Log.d("LocationService", "Started Session ID: $currentSessionId")
+        }
+    }
+
+    private fun stopTrackingSession() {
+        serviceScope.launch {
+            if (currentSessionId != -1L) {
+
+                val session = database.trackingDao().getSessionById(currentSessionId)
+                session?.let {
+                    val endedSession = it.copy(endTime = System.currentTimeMillis())
+                    database.trackingDao().updateSession(endedSession)
+                }
+                currentSessionId = -1L
+            }
         }
     }
 
     private fun initialNotificationChannel() {
         val notificationManger =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -97,8 +143,6 @@ class LocationTracingService : Service() {
             .setContentText("we continuously fetching the updating coordinates")
             .addAction(R.drawable.ic_launcher_background, "Stop Location", pendingIntent)
             .setOngoing(true)
-
-//            .setAutoCancel(true)
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(Notification_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
@@ -108,7 +152,7 @@ class LocationTracingService : Service() {
 
     }
     private fun updateNotification(location: Location) {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val pendingIntent = PendingIntent.getService(
             this, 0,
             Intent(this, LocationTracingService::class.java).apply { action = STOP_ACTION },
@@ -121,7 +165,7 @@ class LocationTracingService : Service() {
             .setContentText("Lat: ${location.lat}, Lng: ${location.long}")
             .addAction(R.drawable.ic_launcher_background, "Stop", pendingIntent)
             .setOngoing(true)
-            .setOnlyAlertOnce(true) // PREVENTS SOUND/VIBRATION ON EVERY UPDATE
+            .setOnlyAlertOnce(true)
             .build()
 
         notificationManager.notify(Notification_ID, notification)
@@ -133,7 +177,7 @@ class LocationTracingService : Service() {
         super.onDestroy()
         serviceScope.cancel()
 
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(Notification_ID)
     }
 }

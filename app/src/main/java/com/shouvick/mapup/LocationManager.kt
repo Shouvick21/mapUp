@@ -16,7 +16,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
-// Ensure this matches your data class definition
 data class Location(
     val lat: String,
     val long: String
@@ -27,10 +26,8 @@ class LocationManager(
 ) {
     private val fusedLocation = LocationServices.getFusedLocationProviderClient(context)
 
-    // Using callbackFlow to convert the Google Callback API into a Coroutine Flow
     fun getLocationFlow(): Flow<Location> = callbackFlow {
 
-        // 1. Check Permissions
         val hasFine = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
@@ -76,7 +73,7 @@ class LocationManager(
                 Looper.getMainLooper()
             )
         } catch (e: SecurityException) {
-            close(e) // Should not happen due to check above, but good practice
+            close(e)
         }
 
 
@@ -85,7 +82,6 @@ class LocationManager(
             fusedLocation.removeLocationUpdates(callback)
         }
     }
-    // Add this inside your LocationManager class
     fun checkLocationSettings(
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
@@ -103,12 +99,10 @@ class LocationManager(
         val task = settingsClient.checkLocationSettings(builder.build())
 
         task.addOnSuccessListener {
-            // GPS is already ON and High Accuracy
             onSuccess()
         }
 
         task.addOnFailureListener { exception ->
-            // GPS is OFF or Low Accuracy
             onFailure(exception)
         }
     }

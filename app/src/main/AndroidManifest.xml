@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
 
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -21,9 +22,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MapUp">
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAnZKOCXYvihJ1rgjtCFHLxReAVBe0RDiw" />
 
         <service
-            android:name=".service.LocationTracingService"
+            android:name=".core.service.LocationTracingService"
             android:foregroundServiceType="location"
             android:enabled="true"
             android:exported="false"
