@@ -14,8 +14,8 @@ android {
 
     defaultConfig {
         applicationId = "com.shouvick.mapup"
-        minSdk = 24
-        targetSdk = 36
+        minSdk = 26
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -40,6 +40,19 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    buildTypes{
+//        create("debug"){
+//            buildConfigField("String","API_KEY","AIzaSyAnZKOCXYvihJ1rgjtCFHLxReAVBe0RDiw")
+//        }
+        debug {
+            manifestPlaceholders["mapsApiKey"] = "AIzaSyAnZKOCXYvihJ1rgjtCFHLxReAVBe0RDiw"
+        }
+        release {
+            manifestPlaceholders["mapsApiKey"] = "AIzaSyAnZKOCXYvihJ1rgjtCFHLxReAVBe0RDiw"
+
+        }
     }
 }
 

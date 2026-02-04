@@ -24,7 +24,7 @@
         android:theme="@style/Theme.MapUp">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyAnZKOCXYvihJ1rgjtCFHLxReAVBe0RDiw" />
+            android:value="${mapsApiKey}" />
 
         <service
             android:name=".core.service.LocationTracingService"
