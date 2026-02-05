@@ -76,4 +76,7 @@ The application consists of two primary screens managed by `Navigation.kt`:
     * **Scrollable List:** A bottom sheet (or list) view of all captured raw coordinates.
 
 ---
+## 🎥 App Demo
+
+[▶️ Click here to watch the full App Demo & Code Walkthrough](https://drive.google.com/file/d/1lMgeSxRO-vpMRF1bVj4MBDsdUGnQbNVM/view)
 

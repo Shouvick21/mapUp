@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.common.api.ResolvableApiException
 import com.shouvick.mapup.LocationManager
@@ -47,7 +48,7 @@ fun MainScreen(
     val viewModel: MainViewModel = viewModel(
         factory = HistoryViewModelFactory(database.trackingDao())
     )
-    val sessions by viewModel.allSessions.collectAsState()
+    val sessions by viewModel.allSessions.collectAsStateWithLifecycle()
 
     val locationManager = remember { LocationManager(context) }
     val fineLocationPermission = remember { Manifest.permission.ACCESS_FINE_LOCATION }
